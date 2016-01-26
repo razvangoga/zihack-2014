@@ -12,13 +12,12 @@ const int ledPin = 13;      // led connected to digital pin 13
 const int knockSensor = A0; // the piezo is connected to analog pin 0
 
 int sensorReading = 0;      // variable to store the value read from the sensor pin
+int sendRequestCounter = 0;
 int ledState = LOW;         // variable used to store the last LED status, to toggle the light
 
 /*Send HTTP POST request to the Azure Mobile Service data API */
 void send_request()
-{
-  readSensor();
-  
+{ 
   Serial.println("connecting");
   int res = client.connect(server, 80);
   Serial.println(res);
@@ -91,31 +90,45 @@ void end_request()
 
 void readSensor()
 {
-    sensorReading = analogRead(knockSensor);
+    Serial.println(F("before read from sensor"));
+  
+    sensorReading += analogRead(knockSensor);
+    sendRequestCounter++;
     
-    char strSensorVale[5];
-    sprintf(strSensorVale, "%d", sensorReading);
+    Serial.println(F("after read from sensor"));
+    
+    char strSensorValue[5];
+    sprintf(strSensorValue, "%d", sensorReading);
     
     Serial.print(F("Sensor value: "));
-    Serial.println(strSensorVale);
+    Serial.println(strSensorValue);
 }
 
  /* Arduino Yun Setup */
 void setup()
 {
-  delay(5000);
+    delay(5000);
     Serial.begin(9600);
     Serial.println("Starting Bridge");
     Bridge.begin();
+    Serial.println("Bridge started");
 }
 
  /* Arduino Yun Loop */
 void loop()
-{
-  Serial.println(F(" "));
-  send_request();
-  wait_response();
-  read_response();
-//  send_request();
-  delay(3000);
+{  
+  Serial.println("entering loop");
+  readSensor();
+  
+  if(sendRequestCounter == 10) 
+  {
+    send_request();
+    wait_response();
+    read_response();
+    
+    sendRequestCounter = 0;
+    sensorReading = 0;
+  }
+  
+  delay(100);
 }
